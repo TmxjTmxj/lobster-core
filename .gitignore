@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Data & memory
+*.db
+*.sqlite
+*.sqlite3
+memory_state.json
+entities.json
+*.jsonl
+
+# Build
+build/
+dist/
+*.spec
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
