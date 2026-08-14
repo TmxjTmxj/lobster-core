@@ -10,7 +10,7 @@ from pathlib import Path
 HERMES_CORE = Path.home() / "hermes_core"
 sys.path.insert(0, str(HERMES_CORE))
 
-from memory.super_memory import HermesMemory
+from super_memory import HermesMemory
 from memory_bridge import _load_json, SHARED_HISTORY, get_full_context
 
 

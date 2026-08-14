@@ -10,7 +10,34 @@ DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 
 # ===== 记忆增强 =====
 sys.path.insert(0, os.path.expanduser("~/.lobster"))
-from memory_engine import search_memory, load_shared_knowledge, store_memory, index_conversation
+try:
+    from memory_engine import search_memory, load_shared_knowledge, store_memory, index_conversation
+except ImportError:
+    # fallback: 使用仓库内 smart_memory（memory_engine 是可选外部模块）
+    def search_memory(query: str, limit: int = 5, **kw):
+        try:
+            from smart_memory import get_memory
+            m = get_memory()
+            rows = m.search(query, limit=limit) if hasattr(m, "search") else []
+            return rows
+        except Exception:
+            return []
+    def load_shared_knowledge(**kw):
+        try:
+            from memory_bridge import SHARED_HISTORY, _load_json
+            return _load_json(SHARED_HISTORY)
+        except Exception:
+            return {}
+    def store_memory(content: str, category: str = "general", **kw):
+        try:
+            from super_memory import HermesMemory
+            m = HermesMemory()
+            m.store(content, category=category)
+            return True
+        except Exception:
+            return False
+    def index_conversation(**kw):
+        return None
 
 # ===== 双向记忆同步 =====
 sys.path.insert(0, os.path.expanduser("~/lobster_core"))

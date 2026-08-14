@@ -87,7 +87,7 @@ class SelfEvolution:
     def get_growth_stats(self) -> dict:
         """获取成长统计"""
         sys.path.insert(0, os.path.expanduser("~"))
-        from lobster_core.smart_memory import get_memory
+        from smart_memory import get_memory
         m = get_memory()
         
         stats = {

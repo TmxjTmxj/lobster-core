@@ -26,6 +26,11 @@ class HermesMemory:
         c.execute("CREATE TABLE IF NOT EXISTS interactions (id INTEGER PRIMARY KEY AUTOINCREMENT, role TEXT NOT NULL, content TEXT NOT NULL, source TEXT DEFAULT '', timestamp REAL, emotion TEXT DEFAULT '', thought TEXT DEFAULT '')")
         try:
             c.execute("CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(content, category, tags, content=memories, content_rowid=id)")
+            # 触发器：新记录/删除自动同步 FTS 索引（否则 search 永远查不到）
+            c.execute("CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN "
+                      "INSERT INTO memories_fts(rowid, content, category, tags) VALUES (new.id, new.content, new.category, new.tags); END")
+            c.execute("CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN "
+                      "INSERT INTO memories_fts(memories_fts, rowid, content, category, tags) VALUES ('delete', old.id, old.content, old.category, old.tags); END")
         except Exception:
             pass  # FTS5 may not be available, fall back to LIKE search
         self.conn.commit()
@@ -38,8 +43,15 @@ class HermesMemory:
             "INSERT INTO memories (type, content, category, importance, tags, source, created) VALUES ('text', ?, ?, ?, ?, ?, ?)",
             (content, category, importance, tags, source, datetime.now().timestamp())
         )
+        mem_id = c.lastrowid
+        # 同步写入 FTS 索引（external-content 表不会自动同步）
+        try:
+            c.execute("INSERT INTO memories_fts(rowid, content, category, tags) VALUES (?, ?, ?, ?)",
+                      (mem_id, content, category, tags))
+        except Exception:
+            pass
         self.conn.commit()
-        return c.lastrowid
+        return mem_id
 
     def search(self, query: str, limit: int = 10, min_importance: int = 1) -> list:
         results = []
@@ -61,7 +73,17 @@ class HermesMemory:
                 )
                 results = c.fetchall()
             except:
-                pass
+                results = []
+            # FTS5 对中文默认不分词（整句当单个 token），MATCH 命中不了 → LIKE 兜底
+            if not results:
+                try:
+                    c.execute(
+                        "SELECT id, content, category, importance, tags, created, accessed FROM memories WHERE content LIKE ? AND importance >= ? ORDER BY created DESC LIMIT ?",
+                        (f"%{query}%", min_importance, limit)
+                    )
+                    results = c.fetchall()
+                except:
+                    pass
         formatted = []
         for r in results:
             formatted.append({

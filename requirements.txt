@@ -1,0 +1,8 @@
+# lobster-core 运行时依赖
+numpy>=1.24
+requests>=2.28
+psutil>=5.9
+
+# 可选（按需启用）：
+# chromadb>=0.4     # L3 向量记忆（memory_v3.py）
+# vosk>=0.3         # 离线语音识别（voice_chat_v2.py）
